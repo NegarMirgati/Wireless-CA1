@@ -5,4 +5,4 @@
 *.doc
 *.docx
 .DS_Store
-
+*.pyc
