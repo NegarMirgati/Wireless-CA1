@@ -9,10 +9,10 @@ class Point:
         dx = self.x - other.x
         dy = self.y - other.y
         return math.sqrt(dx**2 + dy**2)
-    
-    def multiply(self, xCoeff, yCoeff):
-        self.x = self.x * xCoeff
-        self.y = self.y * yCoeff
+      
+    def multiply(self, u, v):
+        self.y = self.x * u - self.y * v
+        self.y = self.x * v + self.y * u
     
     def move(self, dx, dy):
         self.x = self.x + dx
