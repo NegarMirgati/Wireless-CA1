@@ -27,10 +27,9 @@ class Receiver:
                 return "00"
     
     def removeChannelImpact(self,point, hI, hQ):
-        point.multiply(1/hI, -1/hQ)
+        point.multiply(hI, -hQ)
         return point
 
-    
     def demodulate16(self, point):
         if(point.getReal() > 0):
             if(point.getImaginary() > 0):
