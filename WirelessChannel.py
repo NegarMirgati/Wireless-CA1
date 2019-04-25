@@ -12,7 +12,7 @@ class WirelessChannel:
         hI =  np.random.normal(0, 1)
         hQ = np.random.normal(0, 1)
         point.multiply(hI * 0.707, hQ * 0.707)
-        return point
+        return (point, hI, hQ)
 
     def applyAWGN(self, point):
         nI = np.random.normal(0, self.AWGNsigma)
