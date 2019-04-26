@@ -3,6 +3,7 @@ from Transmitter import Transmitter
 from  Receiver import Receiver
 from WirelessChannel import WirelessChannel
 from Utils import Utils
+#import matplotlib.pyplot as plt
 
 class WirelessSystem:
     def __init__(self, numOfInputs):
@@ -13,6 +14,8 @@ class WirelessSystem:
         self.sigmaValues = [10, 1, 0.1]
         self.reveivedPoints = []
         self.colors = ['purple', 'yellow', 'orange']
+        self.hammingProbs = []
+        self.qpskProbs = []
     
     def runForScatterPlot(self):
         u = Utils() 
@@ -80,6 +83,9 @@ class WirelessSystem:
                     numOfCorrectOutputs += 1
             probabilities.append(1 - (numOfCorrectOutputs/self.numOfInputs))
             input.close()
+
+        print(probabilities)
+        self.qpskProbs = probabilities
         u.probVsSNR([(i/10.0) for i in range(1, 100, 1)], probabilities)
 
 
@@ -113,56 +119,122 @@ class WirelessSystem:
 
         u.probVsSNR([i/10.0 for i in range(1, 100, 1)], probabilities)
     
-    '''def runWithHammingCode(self):
+    def runWithHammingCode(self):
         u = Utils() 
+        probabilities = []
         self.encodeAllWithHamming()
-        allDemodulated = open('demodulated.txt', 'w')
-        for i in range(1, 100, 100):
-            numOfCorrectOutputs = 0
-            AWGNsigma = i / 10.0
-            print('for AWGNSgima =', AWGNsigma)
+        for i in range(1, 100, 1):
+            allDemodulated = open('demodulated.txt', 'w')
+            SNR = i / 10.0
+            print('for AWGNSgima =', 1/SNR)
+            self.wirelessChannel.setSigma(1/SNR)
+            content_file = open('encoded.txt', 'r')
+            content = content_file.read()
+            for data in [content[i:i+2] for i in range(0, len(content), 2)] :
+                point = self.transmitter.modulate(data)
+                (hI, hQ) = self.wirelessChannel.applyChannelGain(point)
+                self.wirelessChannel.applyAWGN(point)
+                self.receiver.removeChannelImpact(point, hI, hQ)
+                receiverOut = self.receiver.demodulate2(point)
+                allDemodulated.write(receiverOut)
+            allDemodulated.close()
+
+            self.decodeAll()
+            numOfCorrectOutputs = self.reconstructAndCalcCorrectOutputs()
+            probabilities.append(1 - (numOfCorrectOutputs/(self.numOfInputs)))
+
+        self.hammingProbs = probabilities
+        u.probVsSNR([i/10.0 for i in range(1, 100, 1)], probabilities)
+        #plt.plot([i/10.0 for i in range(1, 100, 1)], probabilities,  color='green')
+        #plt.plot([i/10.0 for i in range(1, 100, 1)], self.qpskProbs)
+        #plt.show()
+
+    def runForScatterPlotHamming(self):
+        u = Utils() 
+        probabilities = []
+        self.receivedPoints = []
+        for i in range(len(self.sigmaValues)):
+            AWGNsigma = self.sigmaValues[i]
             self.wirelessChannel.setSigma(1/AWGNsigma)
-            with open('encoded.txt', 'r') as content_file:
-                content = content_file.read()
-                for data in [content[i:i+2] for i in range(0, len(content), 2)] :
-                    transmitterOut = self.transmitter.modulate(data)
-                    afterChannelGainApplied = self.wirelessChannel.applyChannelGain(transmitterOut)
-                    wirelessChannelOut = self.wirelessChannel.applyAWGN(afterChannelGainApplied)
-                    receiverOut = self.receiver.demodulate2(wirelessChannelOut)
-                    allDemodulated.write(receiverOut)
+            content_file = open('encoded.txt', 'r')
+            content = content_file.read()
+            for data in [content[x:x+2] for x in range(0, len(content), 2)] :
+                point = self.transmitter.modulate(data)
+                (hI, hQ) = self.wirelessChannel.applyChannelGain(point)
+                self.wirelessChannel.applyAWGN(point)
+                self.reveivedPoints.append(point)
 
-            with open('demodulated.txt', 'r') as content_file :
-                content = content_file.read()
-                for data in [content[i:i+7] for i in range(0, len(content), 7)] :
+            u.showScatterPlot(self.reveivedPoints , AWGNsigma, self.colors[i])
+        content_file.close()
 
-
-            print('pppp', self.probabilites)
-            u = Utils()
-            u.probVsSNR([i/10.0 for i in range(1, 100, 1)], self.probabilites)'''
 
     def encodeAllWithHamming(self):
         input = open("input.txt", "r") 
         output = open("encoded.txt", "w")
-        while True : 
-            line1 = input.readline().rstrip()
-            line2 = input.readline().rstrip()
-            if not (line2 or line1): break
-            encoded = self.transmitter.encodeHamming(map(int, line1 + line2))
-            mystring = ""
-            for bit in encoded:
-                mystring += str(bit)
-            output.write(mystring)
+        cntr = 0
+        for line in input: 
+            if(cntr == 0):
+                data = line.rstrip()
+                cntr +=1
+                continue
+            else:
+                data += line.rstrip()
+                cntr = 0
+                encoded = self.transmitter.encodeHamming(map(int, data))
+                mystring = ""
+                for bit in encoded:
+                    mystring += str(bit)
+                output.write(mystring)
         input.close()
         output.close()
+    
+    def decodeAll(self):
+        demod = open('demodulated.txt', 'r')
+        decodedFile = open("decoded.txt", "w")
+        lines = demod.read()
+        for data in [lines[i:i+7] for i in range(0, len(lines), 7)] :
+            decoded = self.receiver.decodeHamming(map(int, data))
+            actualData = data[0:4]
+            mystring = ""
+            for bit in decoded:
+                mystring += str(bit)
+            decodedFile.write(actualData + mystring)
+                    
+        decodedFile.close()
+        demod.close()
+    
+    def reconstructAndCalcCorrectOutputs(self):
+        numOfCorrects = 0
+        counter = 0
+        decodedFile = open('decoded.txt', 'r')
+        lines = tuple(open('input.txt', 'r'))
+        content = decodedFile.read()
+        for line in [content[i:i+7] for i in range(0, len(content), 7)] :
+            actualData = line[0 : 4]
+            syndromes = line[4:7]
+            inputLine1 = lines[counter].rstrip() 
+            inputLine2 = lines[counter + 1].rstrip()
+            correctedOutput = self.receiver.findAndCorrectError(syndromes, actualData)
+            if(correctedOutput[0 : 2] == inputLine1):
+                numOfCorrects += 1
+            if(correctedOutput[2 : 4] == inputLine2):
+                numOfCorrects += 1
+            counter += 2
+
+        return numOfCorrects
+    
 
 def main() :
     w = WirelessSystem(10000)
-    #w.encodeAllWithHamming()
-    #w.runForLinePlot()
+
+    w.runForLinePlot()
     w.runForScatterPlot()
+
     #w.runWithHammingCode()
-    #w.runWithHammingCode()
-    w.runForScatterPlot16()
+    #w.runForScatterPlotHamming()
+
+
+    #w.runForScatterPlot16()
     #w.runForLinePlot16()
 
         

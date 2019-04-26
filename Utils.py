@@ -105,6 +105,11 @@ class Utils :
         fig.savefig("test.png")
         plt.show()
 
+    def  plotHammingVsQpsk(self, x1, y1, x2, y2):
+        plt.plot(x1, y1)
+        plt.plot(x2, y2)
+        plt.show()
+
 def main():
     u = Utils()
     u.generateQpskData()

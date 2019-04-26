@@ -6,7 +6,8 @@ import copy
 
 class Transmitter:
     def __init__(self):
-        self.g =  numpy.array([[1, 0, 0, 0, 0, 1, 1],[0, 1, 0, 0, 1, 0, 1],[0, 0, 1, 0, 1, 1, 0],[0, 0, 0, 1, 1, 1, 1]])
+        '''generates [d1, d2, d3, d4, p1, p2, p3]'''
+        self.g =  numpy.array([[1, 0, 0, 0, 1, 1, 0],[0, 1, 0, 0, 1, 0, 1],[0, 0, 1, 0, 0, 1, 1],[0, 0, 0, 1, 1, 1, 1]])
         self.qam16Dict = {
             "0000" : Point(1/math.sqrt(10), 1/math.sqrt(10)),
              "0001" : Point(1/math.sqrt(10), 3/math.sqrt(10)),
